@@ -5,30 +5,29 @@ type Product = {
     id: number;
     title: string;
     price: number;
-    image: string;
-    rating: {
-        rate: number;
-        count: number;
-    }
+    rating: number;
+    images: string[];
 }
 function LogicPractice() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string| null>(null);
     const [products, setProducts] = useState<Product[]>([]);
-
-    
+    const [page, setPage] = useState(1)
+    const [total, setTotal] = useState(0);
+    const totalPages = Math.ceil(total / 10);
 
     useEffect(() => {
         const fetchData = async () => {
             setLoading(true)
             try {
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/products`);
+                const response = await fetch(`${import.meta.env.VITE_API_URL}/products?limit=10&skip=${(page-1)*10}`);
 
-                if (!response) {
+                if (!response.ok) {
                     throw new Error("Network error")
                 }
                 const data = await response.json();
-                setProducts(data)
+                setProducts(data.products)
+                setTotal(data.total)
             } catch (err) {
                 setError((err as Error).message)
             } finally {
@@ -36,32 +35,41 @@ function LogicPractice() {
             }
         }
         fetchData()
-    },[])
+    },[page])
 
-    if (loading) {
-        return <p>Loading...</p>
-    }
     if (error) {
         return <p>Error: { error }</p>
     }
 
-    const filteredAndSortProducts = products.filter((p)=>p.rating?.count > 100).sort((a,b)=> a.price - b.price)
+    const filteredAndSortProducts = products.filter((p)=>p.rating > 1).sort((a,b)=> a.price - b.price)
   return (
       <div>{
-          filteredAndSortProducts.length === 0 ? (
+        loading &&  filteredAndSortProducts.length === 0 ? (
               <p> No product found</p>
           ) : (
-                  <ul>
+                  <>
+                  <ul className='grid grid-cols-4'>
                       {
                           filteredAndSortProducts.map((p) => (
-                              <li>
+                              <li key={p.id}>
+                                  <img src={p.images[0]} alt={p.title} width={100} height={100} className='mx-auto'/>
                                   <p>{p.title}</p>
                                   <p>{p.price}</p>
-                                  <p>{p.rating.count}</p>
                               </li>
                           ))
                       }
-                  </ul>
+                      </ul>
+                      <div className='flex gap-4 mt-4 justify-center'>
+                          <button type='button' onClick={()=>setPage(prev=> prev-1)} disabled={page <= 1} >
+                          Previous
+                          </button>
+                          {page}
+                      <button type='button' onClick={()=> setPage(prev => prev +1)} disabled={page >= totalPages}>
+                          Next
+                      </button>
+                      </div>
+                  </>
+                  
           )
       }</div>
   )
